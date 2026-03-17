@@ -1,0 +1,21 @@
+# TempestWX APRS Weather Sender Configuration
+
+# TempestWX API credentials
+tempestwx:
+  api_key: "YOUR_TEMPESTWX_API_KEY"
+  station_id: "YOUR_STATION_ID"
+
+# Direwolf KISS TNC settings
+direwolf:
+  host: "localhost"
+  port: 8001
+
+# APRS settings
+aprs:
+  callsign: "YOUR_CALLSIGN"
+  ssid: 5  # Your APRS SSID (typically 0-15)
+  symbol_table: "/"  # "/" for weather station, "\" for other
+  symbol_code: ">"   # ">" for weather station
+
+# Update interval in minutes
+update_interval: 15
