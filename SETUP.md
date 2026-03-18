@@ -86,8 +86,23 @@ aprs:
   symbol_table: "/"              # "/" = primary symbol table
   symbol_code: ">"               # ">" = weather station symbol
 
+logging:
+  logdir: "./logs"               # Directory for log files (relative or absolute path)
+
 update_interval: 15              # Send update every 15 minutes
 ```
+
+**Log Directory Options:**
+
+| Platform | Example |
+|----------|---------|
+| Linux/Mac (relative) | `./logs` or `~/aprswx/logs` |
+| Linux (system-wide) | `/var/log/aprswx` (requires write permissions) |
+| Windows (relative) | `.\logs` |
+| Windows (user profile) | `C:\Users\YourUsername\AppData\Local\aprswx\logs` |
+| Windows (shared) | `C:\aprswx\logs` |
+
+The directory will be created automatically on first run. Use an absolute path for production deployments.
 
 ## Step 5: Test the Setup
 
@@ -113,13 +128,14 @@ Wind: 090° at 12.3 mph
 
 Check logs for any errors:
 ```bash
-tail -20 /var/log/aprswx.log
+tail -20 logs/aprswx.log
 ```
 
 Common issues to look for:
 - "Error connecting to KISS TNC" → Direwolf not running or wrong port
 - "Error fetching weather data" → Invalid API key or station ID
 - "Something unexpected from client" → Direwolf received text instead of binary (old code issue)
+- "Could not setup log file" → Check write permissions to the configured log directory
 
 ## Step 6: Deploy for Continuous Operation
 
@@ -128,8 +144,10 @@ Common issues to look for:
 Add to crontab (`crontab -e`):
 ```bash
 # Run weather sender every 15 minutes
-*/15 * * * * /usr/bin/python3 /path/to/aprswx/main.py --once >> /var/log/aprswx.log 2>&1
+*/15 * * * * cd /path/to/aprswx && /usr/bin/python3 main.py --once >> logs/aprswx.log 2>&1
 ```
+
+**Note:** The log directory will be created automatically if it doesn't exist.
 
 ### Option B: Systemd Service (Recommended - for servers)
 
@@ -179,16 +197,21 @@ Check that data is being transmitted:
 
 1. **Monitor Direwolf output**: Should show packets being digipeated
 2. **Check APRS.fi**: After 5-10 minutes, search for your callsign on https://aprs.fi/
-3. **Monitor logs**: `tail -f /var/log/aprswx.log`
+3. **Monitor logs**: `tail -f logs/aprswx.log` (or your configured log directory)
 
 Example log output:
 ```
-[2026-03-18 14:30:00] Fetching weather data...
-[2026-03-18 14:30:01] Station: 164104
-[2026-03-18 14:30:01] Location: 42.3601, -71.0589
-[2026-03-18 14:30:01] Temperature: 68.5°F (20.3°C)
-[2026-03-18 14:30:01] Wind: 090° at 12.3 mph
-[2026-03-18 14:30:01] Weather data sent successfully!
+2026-03-18 14:30:00,123 - INFO - ============================================================
+2026-03-18 14:30:00,124 - INFO - APRS Weather Sender
+2026-03-18 14:30:00,125 - INFO - ============================================================
+2026-03-18 14:30:00,126 - INFO - Config: /path/to/aprswx/config.yaml
+2026-03-18 14:30:00,127 - INFO - Logs: /path/to/aprswx/logs
+2026-03-18 14:30:05,200 - INFO - Fetching weather data...
+2026-03-18 14:30:05,500 - INFO - Station: 164104
+2026-03-18 14:30:05,600 - INFO - Location: 42.3601, -71.0589
+2026-03-18 14:30:05,700 - INFO - Temperature: 68.5°F (20.3°C)
+2026-03-18 14:30:05,800 - INFO - Wind: 090° at 12.3 mph
+2026-03-18 14:30:06,000 - INFO - Weather data sent successfully!
 ```
 
 ## Unit Conversions

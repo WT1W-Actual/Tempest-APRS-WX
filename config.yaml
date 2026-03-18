@@ -17,5 +17,14 @@ aprs:
   symbol_table: "/"  # "/" for weather station, "\" for other
   symbol_code: ">"   # ">" for weather station
 
+# Logging configuration
+logging:
+  # Directory where log files will be stored
+  # Default: './logs' (created in the application directory)
+  # Alternatives:
+  #   Linux/Mac: '/var/log/aprswx' or '/home/username/aprswx/logs'
+  #   Windows: 'C:\aprswx\logs' or 'C:\Users\username\AppData\Local\aprswx\logs'
+  logdir: "./logs"
+
 # Update interval in minutes
 update_interval: 15

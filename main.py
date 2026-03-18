@@ -18,13 +18,12 @@ from aprs_formatter import APRSWeatherFormatter
 from kiss_tnc import KISSTNCClient
 
 
-# Configure logging to system log file
-LOG_FILE = "/var/log/aprswx.log"
-
-
-def setup_logging() -> logging.Logger:
+def setup_logging(logdir: str = "./logs") -> logging.Logger:
     """
-    Setup logging to both console and system log file.
+    Setup logging to both console and file.
+    
+    Args:
+        logdir: Directory where log files will be stored. Will be created if it doesn't exist.
     
     Returns:
         Configured logger instance
@@ -41,14 +40,19 @@ def setup_logging() -> logging.Logger:
     
     # File handler for debug logging
     try:
-        file_handler = logging.FileHandler(LOG_FILE, mode='a')
+        # Create log directory if it doesn't exist
+        log_path = Path(logdir)
+        log_path.mkdir(parents=True, exist_ok=True)
+        
+        log_file = log_path / "aprswx.log"
+        file_handler = logging.FileHandler(log_file, mode='a')
         file_handler.setLevel(logging.DEBUG)
         file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
         file_handler.setFormatter(file_format)
         logger.addHandler(file_handler)
     except (PermissionError, OSError) as e:
-        # If we can't write to system log, just use console
-        logger.warning(f"Could not open log file {LOG_FILE}: {e}")
+        # If we can't write to log, just use console
+        logger.warning(f"Could not setup log file in {logdir}: {e}")
     
     return logger
 
@@ -160,21 +164,25 @@ def send_weather_data(config: dict, logger: logging.Logger) -> bool:
 
 def main():
     """Main application entry point."""
-    # Setup logging first
-    logger = setup_logging()
-    
     # Determine config path
     script_dir = Path(__file__).parent.resolve()
     config_path = script_dir / "config.yaml"
+    
+    # Load configuration before setting up logging
+    config = load_config(str(config_path))
+    
+    # Get log directory from config
+    logdir = config.get('logging', {}).get('logdir', './logs')
+    
+    # Setup logging with configured directory
+    logger = setup_logging(logdir)
     
     logger.info("=" * 60)
     logger.info("APRS Weather Sender")
     logger.info("=" * 60)
     logger.info(f"Config: {config_path}")
+    logger.info(f"Logs: {Path(logdir).resolve()}")
     logger.info("")
-    
-    # Load configuration
-    config = load_config(str(config_path))
     
     # Check if we should run once or schedule
     if len(sys.argv) > 1 and sys.argv[1] == "--once":
