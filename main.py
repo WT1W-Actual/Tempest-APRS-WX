@@ -128,8 +128,12 @@ def send_weather_data(config: dict, logger: logging.Logger) -> bool:
     
     logger.info(f"Station: {station_id}")
     logger.info(f"Location: {latitude:.4f}, {longitude:.4f}")
-    logger.info(f"Temperature: {obs.get('airTemperature', 'N/A')}°F")
-    logger.info(f"Wind: {obs.get('windDirection', 'N/A')}° at {obs.get('windSpeed', 'N/A')} mph")
+    temp_c = obs.get('air_temperature', 'N/A')
+    temp_f = round(temp_c * 9 / 5 + 32, 1) if isinstance(temp_c, (int, float)) else 'N/A'
+    logger.info(f"Temperature: {temp_f}°F ({temp_c}°C)")
+    wind_ms = obs.get('wind_avg', 'N/A')
+    wind_mph = round(wind_ms * 2.23694, 1) if isinstance(wind_ms, (int, float)) else 'N/A'
+    logger.info(f"Wind: {obs.get('wind_direction', 'N/A')}° at {wind_mph} mph")
     
     # Format APRS message
     weather_message = formatter.format_weather_message(obs, latitude, longitude)
@@ -143,7 +147,7 @@ def send_weather_data(config: dict, logger: logging.Logger) -> bool:
         return False
     
     try:
-        success = tnc_client.send_packet(aprs_packet)
+        success = tnc_client.send_aprs_packet(callsign, ssid, weather_message)
         if success:
             logger.info(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Weather data sent successfully!")
             return True

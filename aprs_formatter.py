@@ -53,58 +53,65 @@ class APRSWeatherFormatter:
     def format_weather_message(self, obs: Dict[str, Any], latitude: float, longitude: float) -> str:
         """
         Format weather observation data to APRS weather message format.
-        
-        APRS Weather Message Format:
-        !llll.llN/ssss.ssSYsym<tab>hhhmm/sssss/gggg/tttt/rPPPP/pPPPP/bBBB/dDDD
-        
-        Args:
-            obs: Weather observation dictionary
-            latitude: Station latitude
-            longitude: Station longitude
-            
-        Returns:
-            Formatted APRS weather message string
+
+        APRS Weather Message Format (strict field order per spec):
+        _ccc/sssgggtttrrrrppppPPPPhhbbbbb
         """
         # Position
         position = self.format_position(latitude, longitude)
-        
+
         # Wind direction (degrees)
-        wind_dir = obs.get("windDirection", 0) or 0
-        
-        # Wind speed (mph)
-        wind_speed = obs.get("windSpeed", 0) or 0
-        
-        # Gust speed (mph)
-        gust = obs.get("gust", 0) or wind_speed
-        
-        # Temperature (Fahrenheit)
-        temp_f = obs.get("airTemperature", 0) or 0
-        # Format temperature as 4-digit with leading zeros and sign
+        wind_dir = int(obs.get("wind_direction", 0) or 0)
+
+        # Wind speed (Tempest returns m/s, APRS needs mph)
+        wind_speed_ms = obs.get("wind_avg", 0) or 0
+        wind_speed = int(round(wind_speed_ms * 2.23694))
+
+        # Gust speed (m/s → mph)
+        gust_ms = obs.get("wind_gust", 0) or wind_speed_ms
+        gust = int(round(gust_ms * 2.23694))
+
+        # Temperature (Tempest returns °C, APRS needs °F)
+        temp_c = obs.get("air_temperature", 0) or 0
+        temp_f = int(round(temp_c * 9 / 5 + 32))
         if temp_f >= 0:
             temp_str = f"t{temp_f:03d}"
         else:
-            temp_str = f"t{abs(temp_f):03d}"  # Negative temps handled differently in APRS
-        
-        # Rainfall (inches - today's total)
-        rain_in = obs.get("precipTotal", 0) or 0
-        if rain_in > 0:
-            rain_str = f"r{rain_in * 100:03d}"  # Convert to hundredths of an inch
-        else:
-            rain_str = "r000"
-        
-        # Pressure (millibars or inches Hg)
-        pressure = obs.get("pressure", 0) or 0
-        if pressure > 0:
-            # Convert to millibars if in hPa, or keep as is
-            pressure_str = f"b{int(pressure)}"
-        else:
-            pressure_str = "b000"
-        
-        # Build the message
-        # Note: APRS weather format uses tab character between position and data
-        weather_data = f"{wind_dir:03d}/{int(wind_speed):03d}/{int(gust):03d}{temp_str}{rain_str}b{pressure_str}"
-        
-        return f"{position}{self.symbol_table}\t{weather_data}"
+            temp_str = f"t-{abs(temp_f):02d}"
+
+        # Rainfall (Tempest returns mm, APRS needs hundredths of an inch)
+        # r = last 1 hour, p = last 24 hours, P = since midnight
+        rain_1h_mm = obs.get("precip", 0) or 0
+        rain_1h = int(round(rain_1h_mm * 3.93701))
+
+        rain_24h_mm = obs.get("precip_accum_last_1hr", 0) or 0  # fallback; Tempest uses 1hr field
+        rain_24h = int(round(rain_24h_mm * 3.93701))
+
+        rain_midnight_mm = obs.get("precip_accum_local_day", 0) or 0
+        rain_midnight = int(round(rain_midnight_mm * 3.93701))
+
+        # Humidity (0-99; 00 means 100%)
+        humidity = int(obs.get("relative_humidity", 0) or 0)
+        humidity_str = f"h{humidity % 100:02d}"
+
+        # Pressure (Tempest returns mb/hPa, APRS needs tenths of mb, 5 digits)
+        pressure_mb = obs.get("sea_level_pressure", 0) or 0
+        pressure_str = f"b{int(round(pressure_mb * 10)):05d}"
+
+        # Build weather data in strict APRS field order:
+        # _ccc/sssgggtttrrrrppppPPPPhhbbbbb
+        weather_data = (
+            f"_{wind_dir:03d}/{wind_speed:03d}"
+            f"g{gust:03d}"
+            f"{temp_str}"
+            f"r{rain_1h:03d}"
+            f"p{rain_24h:03d}"
+            f"P{rain_midnight:03d}"
+            f"{humidity_str}"
+            f"{pressure_str}"
+        )
+
+        return f"{position}{self.symbol_code}{weather_data}"
     
     def format_packet(self, message: str) -> str:
         """
@@ -121,4 +128,4 @@ class APRSWeatherFormatter:
         dst_addr = "APRS"
         src_addr = f"{self.callsign}-{self.ssid}"
         
-        return f"{dst_addr}<{src_addr},WIDE1-1}:{message}"
+        return f"{dst_addr}<{src_addr},WIDE1-1>:{message}"

@@ -2,17 +2,17 @@
 
 # TempestWX API credentials
 tempestwx:
-  api_key: "YOUR_TEMPESTWX_API_KEY"
-  station_id: "YOUR_STATION_ID"
+  api_key: "YOUR_TEMPEST_API_TOKEN_HERE"
+  station_id: "YOUR_STATION_ID_HERE"
 
 # Direwolf KISS TNC settings
 direwolf:
-  host: "localhost"
+  host: "172.16.2.201"
   port: 8001
 
 # APRS settings
 aprs:
-  callsign: "YOUR_CALLSIGN"
+  callsign: "YOUR_CALLSIGN_HERE"
   ssid: 5  # Your APRS SSID (typically 0-15)
   symbol_table: "/"  # "/" for weather station, "\" for other
   symbol_code: ">"   # ">" for weather station
